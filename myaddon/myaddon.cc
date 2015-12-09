@@ -1,23 +1,30 @@
 #include <nan.h>
+#include <iostream>
+
+// check if on linux
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 using namespace v8;
 
-NAN_METHOD(Length) {
-  Nan::MaybeLocal<String> maybeStr = Nan::To<String>(info[0]);
-  v8::Local<String> str;
+NAN_METHOD(Delay) {
+  int num = info[0]->IntegerValue();
 
-  if(maybeStr.ToLocal(&str) == false) {
-    Nan::ThrowError("Error converting first argument to string");
-  }
+  // windows vs POSIX-compliant check
+  #ifdef _WIN32
+  Sleep(num);
+  #else
+  usleep(num * 1000);
+  #endif
 
-  int len = strlen(*String::Utf8Value(str));
-
-  info.GetReturnValue().Set(len);
+  v8::Local<Function> callback = info[1].As<Function>();
+  Nan::MakeCallback(Nan::GetCurrentContext()->Global(), callback, 0, NULL);
 }
 
 NAN_MODULE_INIT(Init) {
-  Nan::Set(target, Nan::New("length").ToLocalChecked(),
-      Nan::GetFunction(Nan::New<FunctionTemplate>(Length)).ToLocalChecked());
+  Nan::Set(target, Nan::New("delay").ToLocalChecked(),
+      Nan::GetFunction(Nan::New<FunctionTemplate>(Delay)).ToLocalChecked());
 }
 
 NODE_MODULE(myaddon, Init)
